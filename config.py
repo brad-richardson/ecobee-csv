@@ -13,6 +13,7 @@ class EcobeeConfig:
             self.access_token = data["access_token"] if "access_token" in data else ""
             self.refresh_token = data["refresh_token"] if "refresh_token" in data else ""
             self.thermostat_ids = data["thermostat_ids"] if "thermostat_ids" in data else []
+            self.csv_location = data["csv_location"] if "csv_location" in data else "ecobee.csv"
 
     def save(self):
         with open(CONFIG_FILENAME, 'w') as config_file:

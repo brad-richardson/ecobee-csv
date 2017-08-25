@@ -9,10 +9,11 @@ from config import EcobeeConfig
 VERBOSE = False
 DAYS_AGO_START = 1
 DAYS_AGO_END = 0
-CSV_LOCATION = ""
 RUNTIME_COLUMNS = 'auxHeat1,auxHeat2,auxHeat3,compCool1,compCool2,compHeat1,compHeat2,dehumidifier,dmOffset,economizer,'\
     + 'fan,humidifier,hvacMode,outdoorHumidity,outdoorTemp,sky,ventilator,wind,zoneAveTemp,zoneCalendarEvent,'\
     + 'zoneClimate,zoneCoolTemp,zoneHeatTemp,zoneHumidity,zoneHumidityHigh,zoneHumidityLow,zoneHvacMode,zoneOccupancy'
+CSV_HEADERS = "date,time," + RUNTIME_COLUMNS
+# TODO? - rename column headers to ecobee recommended and more readable ones
 
 
 def string_to_date(string):
@@ -92,15 +93,15 @@ class EcobeeCSV:
         # print(self.report_rows)
 
     def __read_csv(self):
-        print("***Reading CSV from " + CSV_LOCATION + "***")
+        print("***Reading CSV from " + self.config.csv_location + "***")
         self.csv = []
-        if not os.path.exists(CSV_LOCATION):
+        if not os.path.exists(self.config.csv_location):
             if VERBOSE:
                 print("Creating CSV file at path")
-            with open(CSV_LOCATION, 'w') as csv_file:
-                csv_file.write("date,time," + RUNTIME_COLUMNS)
+            with open(self.config.csv_location, 'w') as csv_file:
+                csv_file.write(CSV_HEADERS)
                 csv_file.write("\n")
-        with open(CSV_LOCATION, 'r') as csv_file:
+        with open(self.config.csv_location, 'r') as csv_file:
             for line in csv_file.readlines():
                 self.csv.append(line.rstrip())
 
@@ -118,8 +119,8 @@ class EcobeeCSV:
         self.csv = self.csv[0:last_index] + self.report_rows
 
     def __write_csv(self):
-        print("***Writing CSV***")
-        with open(CSV_LOCATION, 'w') as csv_file:
+        print("***Writing CSV to " + self.config.csv_location + "***")
+        with open(self.config.csv_location, 'w') as csv_file:
             for line in self.csv:
                 csv_file.write(line + "\n")
 
@@ -129,10 +130,8 @@ if __name__ == '__main__':
     parser.add_argument("-v", "--verbose", help="Verbose logs", action="store_true")
     parser.add_argument("-d1", "--days-ago-start", type=int, default=1, help="Days ago to start history fetch (max 30 days total length)")
     parser.add_argument("-d2", "--days-ago-end", type=int, default=0, help="Days ago to end history fetch (max 30 days total length)")
-    parser.add_argument("--file", type=str, default="ecobee.csv", help="File location to store")
     args = parser.parse_args()
     VERBOSE = args.verbose
-    CSV_LOCATION = args.file
     DAYS_AGO_START = args.days_ago_start
     DAYS_AGO_END = args.days_ago_end
 
