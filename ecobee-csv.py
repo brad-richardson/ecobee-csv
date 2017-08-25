@@ -1,5 +1,9 @@
-import requests, datetime, os.path
 from argparse import ArgumentParser
+
+import datetime
+import os.path
+import requests
+
 from config import EcobeeConfig
 
 VERBOSE = False
@@ -9,6 +13,16 @@ CSV_LOCATION = ""
 RUNTIME_COLUMNS = 'auxHeat1,auxHeat2,auxHeat3,compCool1,compCool2,compHeat1,compHeat2,dehumidifier,dmOffset,economizer,'\
     + 'fan,humidifier,hvacMode,outdoorHumidity,outdoorTemp,sky,ventilator,wind,zoneAveTemp,zoneCalendarEvent,'\
     + 'zoneClimate,zoneCoolTemp,zoneHeatTemp,zoneHumidity,zoneHumidityHigh,zoneHumidityLow,zoneHvacMode,zoneOccupancy'
+
+
+def string_to_date(string):
+    return datetime.datetime.strptime(string, "%Y-%m-&d")
+
+
+def date_string(days_ago):
+    today = datetime.date.today()
+    day = today - datetime.timedelta(days=days_ago)
+    return day.strftime("%Y-%m-%d")
 
 
 class EcobeeCSV:
@@ -40,6 +54,7 @@ class EcobeeCSV:
         self.config.refresh_token = refresh_json['refresh_token']
         self.config.save()
 
+    # Fetch list of thermostats and store ids
     def __fetch_thermostats(self):
         print("***Fetching thermostats***")
         url = 'https://api.ecobee.com/1/thermostat?format=json&body={"selection":{"selectionType":"registered","selectionMatch":""}}'
@@ -54,10 +69,11 @@ class EcobeeCSV:
         self.config.thermostat_ids = thermostat_ids
         self.config.save()
 
+    # Fetch historical data for first thermostat
     def __fetch_data(self):
         print("***Fetching data***")
-        start_date = self.__date_string(days_ago=DAYS_AGO_START)
-        end_date = self.__date_string(days_ago=DAYS_AGO_END)
+        start_date = date_string(days_ago=DAYS_AGO_START)
+        end_date = date_string(days_ago=DAYS_AGO_END)
         thermostat_ids_csv = self.config.thermostat_ids_csv()
         url = 'https://api.ecobee.com/1/runtimeReport?format=json&body={"startDate":"' + start_date + '",'\
               + '"endDate":"' + end_date + '"'\
@@ -90,11 +106,11 @@ class EcobeeCSV:
 
     def __update_csv(self):
         print("***Updating data***")
-        # TODO - fix this, dropping rows that shouldn't be dropped...
         # Drop all rows from start date and after
-        last_date_to_keep = self.__date_string(DAYS_AGO_START - 1)
+        last_date_to_keep = date_string(DAYS_AGO_START - 1)
         last_index = 1
-        for row in self.csv:
+        # Start from second row, continue until we are past the start date
+        for row in self.csv[1:]:
             row_date = row.split(",")[0]
             if row_date > last_date_to_keep:
                 break
@@ -106,15 +122,6 @@ class EcobeeCSV:
         with open(CSV_LOCATION, 'w') as csv_file:
             for line in self.csv:
                 csv_file.write(line + "\n")
-
-
-    def __date_string(self, days_ago):
-        today = datetime.date.today()
-        day = today - datetime.timedelta(days=days_ago)
-        return day.strftime("%Y-%m-%d")
-
-    def __string_to_date(self, string):
-        return datetime.datetime.strptime(string, "%Y-%m-&d")
 
 
 if __name__ == '__main__':
