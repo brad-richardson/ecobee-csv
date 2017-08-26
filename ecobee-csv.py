@@ -175,7 +175,7 @@ class EcobeeCSV:
     @staticmethod
     def __update_data(existing_data, new_data, days_ago_start):
         print("***Updating data***")
-        last_date_to_keep = date_string(days_ago_start - 1)
+        last_date_to_keep = date_string(days_ago_start + 1)
         last_index = 1
         # Start from second row, continue until we are past the start date
         for row in existing_data[1:]:
@@ -194,11 +194,6 @@ class EcobeeCSV:
         with open(self.config.csv_location, 'w') as csv_file:
             for line in csv_lines:
                 csv_file.write(line + "\n")
-
-
-# Converts strings like 2017-08-07 to python datetime
-def string_to_date(string):
-    return datetime.datetime.strptime(string, "%Y-%m-&d")
 
 
 # Converts days ago int to date string like 2017-08-07
