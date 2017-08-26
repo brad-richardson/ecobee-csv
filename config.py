@@ -5,9 +5,9 @@ CONFIG_FILENAME = "config.json"
 
 class EcobeeConfig:
     def __init__(self):
+        self.api_key = "d8Ezdom1IEIpv7KI61pNvylosejQvGwR"
         with open(CONFIG_FILENAME) as config_file:
             data = json.load(config_file)
-            self.api_key = data["api_key"]
             self.pin = data["pin"] if "pin" in data else ""
             self.code = data["code"] if "code" in data else ""
             self.access_token = data["access_token"] if "access_token" in data else ""
