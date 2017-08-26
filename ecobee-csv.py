@@ -7,7 +7,7 @@ import requests
 from config import EcobeeConfig
 
 VERBOSE = False
-# Keys here are ecobee's columns to request, values are more readable names for the actual CSV file
+# Keys here are Ecobee's request column names, values are readable names used for the CSV file header
 COLUMNS = {
   "auxHeat1": "Aux Heat (sec)",
   "auxHeat2": "Aux Heat Stage 2 (sec)",
@@ -45,6 +45,7 @@ class EcobeeCSV:
     def __init__(self, config):
         self.config = config
 
+    # Fetch history at given days and save to CSV, only preserving data older than days ago start
     def update(self, days_ago_start, days_ago_end):
         self.__refresh_tokens()
         self.__fetch_thermostats()
@@ -53,6 +54,7 @@ class EcobeeCSV:
         updated_data = self.__update_data(existing_data=existing_data, new_data=new_data, days_ago_start=days_ago_start)
         self.__write_csv(csv_lines=updated_data)
 
+    # Fetch all history and save to CSV, overwriting all
     def update_all_history(self):
         # Verify that they want to do this - will overwrite any old data
         choice = input("This will overwrite any existing file at " + self.config.csv_location + ", continue? (y/n) ")
@@ -127,6 +129,7 @@ class EcobeeCSV:
     def __fetch_all_data(self):
         print("***Fetching all data***")
         history_days_ago = 30
+        print("Attempting to find when thermostat history began")
         # Keep looking for data until we hit two years max or break because we found data start
         while history_days_ago < 730:
             # Fetch only one day's worth of data per month to move fast
@@ -138,6 +141,7 @@ class EcobeeCSV:
         # Should now have max number of days to fetch. Start from history_days_ago, subtract 30 and fetch until we hit 0
         all_data = [CSV_HEADER_ROW]
         is_first = True
+        print("Downloading history starting " + str(history_days_ago) + " days ago")
         while history_days_ago > 0:
             month_data = self.__fetch_data(days_ago_start=history_days_ago, days_ago_end=history_days_ago-30)
             # First month fetched will have garbage data, remove it
@@ -185,11 +189,11 @@ class EcobeeCSV:
     # Write out data to the CSV
     def __write_csv(self, csv_lines):
         print("***Writing CSV to " + self.config.csv_location + "***")
+        if VERBOSE:
+            print("Writing " + str(len(csv_lines)) + " lines to file")
         with open(self.config.csv_location, 'w') as csv_file:
             for line in csv_lines:
                 csv_file.write(line + "\n")
-
-# Helper functions
 
 
 # Converts strings like 2017-08-07 to python datetime
@@ -216,7 +220,7 @@ def actual_data_start_index(data):
     return start_index
 
 
-# True or false whether row has actual data and not just outside weather data
+# If row has actual thermostat data and not just weather data
 def is_actual_data_row(row):
     columns = row.split(',')
     non_empty_count = columns.count('')
