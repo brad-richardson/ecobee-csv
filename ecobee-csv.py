@@ -227,7 +227,7 @@ def is_actual_data_row(row):
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose logs")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
     parser.add_argument("-d1", "--days-ago-start", type=int, default=1,
                         help="Days ago to start history fetch (max 30 days total length)")
     parser.add_argument("-d2", "--days-ago-end", type=int, default=0,

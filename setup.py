@@ -6,7 +6,7 @@ import webbrowser
 
 from config import EcobeeConfig
 
-verbose = False
+VERBOSE = False
 
 
 class EcobeeSetup:
@@ -33,7 +33,7 @@ class EcobeeSetup:
               + '&client_id=' + self.config.api_key
         response = requests.get(url)
         pin_json = response.json()
-        if verbose:
+        if VERBOSE:
             print("Pin JSON:")
             print(pin_json)
         self.config.pin = pin_json['ecobeePin']
@@ -48,10 +48,11 @@ class EcobeeSetup:
         time.sleep(5)
         webbrowser.open("https://www.ecobee.com/home/ecobeeLogin.jsp")
         input("\nPress enter when finished")
+        print("\n***Requesting tokens***")
         data = {'grant_type': 'ecobeePin', 'code': self.config.code, 'client_id': self.config.api_key}
         response = requests.post('https://api.ecobee.com/token', data=data)
         token_json = response.json()
-        if verbose:
+        if VERBOSE:
             print("Token JSON:")
             print(token_json)
         self.config.access_token = token_json['access_token']
@@ -61,9 +62,9 @@ class EcobeeSetup:
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument("--verbose", help="Verbose logs", action="store_true")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
     args = parser.parse_args()
-    verbose = args.verbose
+    VERBOSE = args.verbose
 
     ecobee = EcobeeSetup(EcobeeConfig())
     ecobee.setup()
