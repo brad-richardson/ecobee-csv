@@ -25,4 +25,4 @@ After initial setup and downloading of all my history, I scheduled `python3 ecob
 After running the initial setup, open `config.json` and change the value for the `"csv_location"` key to the new file location.
 
 ### Troubleshooting
-Add --verbose to any script call and you will see more details about what is happening while the script is running.
+Add `--verbose` to any script call and you will see more details about what is happening while the script is running.
