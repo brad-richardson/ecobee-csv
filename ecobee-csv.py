@@ -45,13 +45,13 @@ class EcobeeCSV:
     def __init__(self, config):
         self.config = config
 
-    # Fetch history at given days and save to CSV, only preserving data older than days ago start
+    # Fetch history at given days and save to CSV, overwriting previous fetched data for range
     def update(self, days_ago_start, days_ago_end):
         self.__refresh_tokens()
         self.__fetch_thermostats()
         new_data = self.__fetch_data(days_ago_start=days_ago_start, days_ago_end=days_ago_end)
         existing_data = self.__read_csv()
-        updated_data = self.__update_data(existing_data=existing_data, new_data=new_data, days_ago_start=days_ago_start)
+        updated_data = self.__update_data(existing_data=existing_data, new_data=new_data)
         self.__write_csv(csv_lines=updated_data)
 
     # Fetch all history and save to CSV, overwriting all
@@ -62,7 +62,6 @@ class EcobeeCSV:
             return
         self.__refresh_tokens()
         self.__fetch_thermostats()
-        self.__create_csv()
         data = self.__fetch_all_data()
         self.__write_csv(csv_lines=data)
 
@@ -139,7 +138,7 @@ class EcobeeCSV:
                 break
             history_days_ago += 30
         # Should now have max number of days to fetch. Start from history_days_ago, subtract 30 and fetch until we hit 0
-        all_data = [CSV_HEADER_ROW]
+        all_data = []
         is_first = True
         print("Downloading history starting " + str(history_days_ago) + " days ago")
         while history_days_ago > 0:
@@ -152,39 +151,32 @@ class EcobeeCSV:
             history_days_ago = history_days_ago - 30
         return all_data
 
-    # Read existing CSV data. Will create new file if none exists
+    # Read existing CSV data if exists
     def __read_csv(self):
         print("***Reading CSV from " + self.config.csv_location + "***")
         existing_data = []
         if not os.path.exists(self.config.csv_location):
-            self.__create_csv()
+            return []
         with open(self.config.csv_location, 'r') as csv_file:
             for line in csv_file.readlines():
                 existing_data.append(line.rstrip())
         return existing_data
 
-    # Create new CSV file at config file location
-    def __create_csv(self):
-        print("***Creating CSV at " + self.config.csv_location + "***")
-        with open(self.config.csv_location, 'w') as csv_file:
-            csv_header_row = CSV_HEADER_ROW
-            csv_file.write(csv_header_row)
-            csv_file.write("\n")
-
-    # Drops any rows in the read data that happen during or after the new set of data and appends the new data
+    # Override any old data with new data, sort it and return it
     @staticmethod
-    def __update_data(existing_data, new_data, days_ago_start):
+    def __update_data(existing_data, new_data):
         print("***Updating data***")
-        last_date_to_keep = date_string(days_ago_start + 1)
-        last_index = 1
-        # Start from second row, continue until we are past the start date
+        updated_data_dict = {}
+        comma_index = 19  # Index of comma after time column for splitting
         for row in existing_data[1:]:
-            row_date = row.split(",")[0]
-            if row_date > last_date_to_keep:
-                break
-            last_index = last_index + 1
-        # Drop all rows from start date and after
-        return existing_data[0:last_index] + new_data
+            updated_data_dict[row[0:comma_index]] = row[comma_index:]
+        for row in new_data:
+            updated_data_dict[row[0:comma_index]] = row[comma_index:]
+        updated_data = []
+        for item in updated_data_dict.items():
+            updated_data.append(item[0] + item[1])
+        updated_data.sort()
+        return updated_data
 
     # Write out data to the CSV
     def __write_csv(self, csv_lines):
@@ -192,6 +184,7 @@ class EcobeeCSV:
         if VERBOSE:
             print("Writing " + str(len(csv_lines)) + " lines to file")
         with open(self.config.csv_location, 'w') as csv_file:
+            csv_file.write(CSV_HEADER_ROW + "\n")
             for line in csv_lines:
                 csv_file.write(line + "\n")
 
