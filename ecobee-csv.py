@@ -7,38 +7,38 @@ import requests
 from config import EcobeeConfig
 
 VERBOSE = False
-# Keys here are Ecobee's request column names, values are readable names used for the CSV file header
-COLUMNS = {
-  "auxHeat1": "Aux Heat (sec)",
-  "auxHeat2": "Aux Heat Stage 2 (sec)",
-  "auxHeat3": "Aux Heat Stage 3 (sec)",
-  "compCool1": "Cool Stage 1 (sec)",
-  "compCool2": "Cool Stage 2 (sec)",
-  "compHeat1": "Heat Stage 1 (sec)",
-  "compHeat2": "Heat Stage 2 (sec)",
-  "dehumidifier": "Dehumidifier (sec)",
-  "dmOffset": "Demand Mgmt Offset (F)",
-  "economizer": "Economizer Runtime (sec)",
-  "fan": "Fan (sec)",
-  "humidifier": "Humidifier (sec)",
-  "hvacMode": "HVAC Mode",
-  "outdoorHumidity": "Outdoor Humidity (%)",
-  "outdoorTemp": "Outdoor Temp (F)",
-  "sky": "Sky Cover",
-  "ventilator": "Ventilator (sec)",
-  "wind": "Wind Speed (km/h)",
-  "zoneAveTemp": "Indoor Temp Avg (F)",
-  "zoneCalendarEvent": "Override Event",
-  "zoneClimate": "Climate Mode",
-  "zoneCoolTemp": "Zone Cool Temp",
-  "zoneHeatTemp": "Zone Heat Temp",
-  "zoneHumidity": "Humidity Avg (%)",
-  "zoneHumidityHigh": "Humidity High (%)",
-  "zoneHumidityLow": "Humidity Low (%)",
-  "zoneHvacMode": "HVAC System Mode",
-  "zoneOccupancy": "Zone Occupancy"
-}
-CSV_HEADER_ROW = "Date,Time," + ','.join(list(COLUMNS.values()))
+# First values here are Ecobee's request column names, second are readable names used for the CSV file header
+COLUMNS = (
+  ("auxHeat1", "Aux Heat (sec)"),
+  ("auxHeat2", "Aux Heat Stage 2 (sec)"),
+  ("auxHeat3", "Aux Heat Stage 3 (sec)"),
+  ("compCool1", "Cool Stage 1 (sec)"),
+  ("compCool2", "Cool Stage 2 (sec)"),
+  ("compHeat1", "Heat Stage 1 (sec)"),
+  ("compHeat2", "Heat Stage 2 (sec)"),
+  ("dehumidifier", "Dehumidifier (sec)"),
+  ("dmOffset", "Demand Mgmt Offset (F)"),
+  ("economizer", "Economizer Runtime (sec)"),
+  ("fan", "Fan (sec)"),
+  ("humidifier", "Humidifier (sec)"),
+  ("hvacMode", "HVAC Mode"),
+  ("outdoorHumidity", "Outdoor Humidity (%)"),
+  ("outdoorTemp", "Outdoor Temp (F)"),
+  ("sky", "Sky Cover"),
+  ("ventilator", "Ventilator (sec)"),
+  ("wind", "Wind Speed (km/h)"),
+  ("zoneAveTemp", "Indoor Temp Avg (F)"),
+  ("zoneCalendarEvent", "Override Event"),
+  ("zoneClimate", "Climate Mode"),
+  ("zoneCoolTemp", "Zone Cool Temp"),
+  ("zoneHeatTemp", "Zone Heat Temp"),
+  ("zoneHumidity", "Humidity Avg (%)"),
+  ("zoneHumidityHigh", "Humidity High (%)"),
+  ("zoneHumidityLow", "Humidity Low (%)"),
+  ("zoneHvacMode", "HVAC System Mode"),
+  ("zoneOccupancy", "Zone Occupancy")
+)
+CSV_HEADER_ROW = "Date,Time," + ','.join([column[1] for column in COLUMNS])
 
 
 class EcobeeCSV:
@@ -108,7 +108,7 @@ class EcobeeCSV:
         end_date = date_string(days_ago=days_ago_end)
         print("***Fetching data from " + start_date + " to " + end_date + "***")
         thermostat_ids_csv = self.config.thermostat_ids_csv()
-        columns_csv = ','.join(list(COLUMNS.keys()))
+        columns_csv = ','.join([column[0] for column in COLUMNS])
         url = 'https://api.ecobee.com/1/runtimeReport?format=json&body={"startDate":"' + start_date + '"'\
               + ',"endDate":"' + end_date + '"'\
               + ',"columns":"' + columns_csv + '"'\

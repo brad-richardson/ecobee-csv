@@ -3,8 +3,9 @@ from argparse import ArgumentParser
 import requests
 import time
 import webbrowser
+import os
 
-from config import EcobeeConfig
+from config import EcobeeConfig, CONFIG_FILENAME
 
 VERBOSE = False
 
@@ -78,5 +79,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     VERBOSE = args.verbose
 
+    # Create config if it doesn't exist
+    if not os.path.isfile(CONFIG_FILENAME):
+        with open(CONFIG_FILENAME, "w+") as config_file:
+            config_file.write("{}")
+            
     ecobee = EcobeeSetup(EcobeeConfig())
     ecobee.setup()
