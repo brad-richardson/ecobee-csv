@@ -6,8 +6,6 @@ CONFIG_FILENAME = "config.json"
 
 class EcobeeConfig:
     def __init__(self):
-        self.api_key = "d8Ezdom1IEIpv7KI61pNvylosejQvGwR"
-        logging.debug("asdf")
         try:
             with open(CONFIG_FILENAME) as config_file:
                 data = json.load(config_file)
@@ -15,6 +13,7 @@ class EcobeeConfig:
                 self.code = data.get("code", "")
                 self.access_token = data.get("access_token", "")
                 self.refresh_token = data.get("refresh_token", "")
+                self.api_key = data.get("api_key", "")
                 self.thermostat_ids = data.get("thermostat_ids", [])
                 self.csv_location = data.get("csv_location", "ecobee.csv")
         except:
@@ -30,3 +29,12 @@ class EcobeeConfig:
 
     def auth_header(self):
         return {"Authorization": "Bearer " + self.access_token}
+
+    # CSV thermostat ids (ex: "1234,5678,9000")
+    def thermostat_ids_csv(self):
+        csv = ""
+        prefix = ""
+        for thermostat_id in self.thermostat_ids:
+            csv = csv + prefix + thermostat_id
+            prefix = ","
+        return csv

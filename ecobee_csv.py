@@ -5,7 +5,7 @@ import logging
 import os.path
 import requests
 
-from ecobee_config import EcobeeConfig
+from ecobee_config import EcobeeConfig, CONFIG_FILENAME
 from ecobee_setup import EcobeeSetup
 
 # First values here are Ecobee's request column names, second are readable names used for the CSV file header
@@ -39,7 +39,7 @@ COLUMNS = (
     ("zoneHvacMode", "HVAC System Mode"),
     ("zoneOccupancy", "Zone Occupancy"),
 )
-CSV_HEADER_ROW = "Date,Time,Thermostat ID," + ",".join(
+CSV_HEADER_ROW = "Thermostat ID,Date,Time," + ",".join(
     [column[1] for column in COLUMNS]
 )
 
@@ -86,9 +86,7 @@ class EcobeeCSV:
         }
         response = requests.post("https://api.ecobee.com/token", data=refresh_req_data)
         refresh_json = response.json()
-        if VERBOSE:
-            print("Refresh token JSON:")
-            print(refresh_json)
+        logging.debug(f"Refresh token JSON: {refresh_json}")
         self.config.access_token = refresh_json["access_token"]
         self.config.refresh_token = refresh_json["refresh_token"]
         self.config.save()
@@ -136,15 +134,19 @@ class EcobeeCSV:
             + thermostat_ids_csv
             + '"}}'
         )
-
-        logging.debug("Data fetch URL:")
-        logging.debug(url)
+        logging.debug(f"Data fetch URL: {url}")
 
         response = requests.get(url, headers=self.config.auth_header())
         report_json = response.json()
-        # Only using first thermostats data, change this in the future to accept more
-        data = report_json["reportList"][0]["rowList"]
-        logging.debug("Report had " + str(len(data)) + " rows")
+
+        # Flattened rows of data with initial thermostat id column
+        data = []
+        for report in report_json["reportList"]:
+            row_list = report.get("rowList")
+            thermostat_id = report.get("thermostatIdentifier")
+            for row in row_list:
+                data.append(f"{thermostat_id},{row}")
+        logging.debug(f"Report had {len(data)} rows")
 
         return data
 
@@ -184,19 +186,22 @@ class EcobeeCSV:
     # Read existing CSV data if exists
     def __read_csv(self):
         logging.info("***Reading CSV from " + self.config.csv_location + "***")
-        existing_data = []
         if not os.path.exists(self.config.csv_location):
             return []
         with open(self.config.csv_location, "r") as csv_file:
-            for line in csv_file.readlines():
-                existing_data.append(line.rstrip())
-        return existing_data
+            return [line.rstrip() for line in csv_file]
 
     # Override any old data with new data, sort it and return it
     @staticmethod
-    def __update_data(existing_data, new_data):
+    def __update_data(existing_df, new_df):
         logging.info("***Updating data***")
         updated_data_dict = {}
+        # TODO - add column for thermostat id if not exists
+        # set key using thermostat id/date/time
+
+
+
+        # TODO - this is dumb
         comma_index = 19  # Index of comma after time column for splitting
         for row in existing_data[1:]:
             updated_data_dict[row[0:comma_index]] = row[comma_index:]
@@ -210,9 +215,10 @@ class EcobeeCSV:
 
     # Write out data to the CSV
     def __write_csv(self, csv_lines):
-        logging.info("***Writing CSV to " + self.config.csv_location + "***")
+        logging.info(f"***Writing CSV to {self.config.csv_location}***")
         logging.debug(f"Writing {len(csv_lines)} lines to file")
 
+        # TODO, write out dataframe
         with open(self.config.csv_location, "w") as csv_file:
             csv_file.write(CSV_HEADER_ROW + "\n")
             for line in csv_lines:
@@ -280,14 +286,16 @@ if __name__ == "__main__":
     parser.add_argument("--setup", action="store_true", help="Setup ecobee connection")
     args = parser.parse_args()
 
-    logging.basicConfig(level=args.loglevel, format="%(levelname)s: %(message)s")
+    logging.basicConfig(level=args.loglevel, format="%(message)s")
 
     if args.setup:
-        ecobee = EcobeeSetup(EcobeeConfig())
-        ecobee.setup()
-    else:
-        # TODO - validate config first
+        if not os.path.isfile(CONFIG_FILENAME):
+            logging.info(f"***Creating default config file at {CONFIG_FILENAME}")
+            with open(CONFIG_FILENAME, "w+") as config_file:
+                config_file.write("{}")
 
+        EcobeeSetup(EcobeeConfig()).setup()
+    else:
         ecobee = EcobeeCSV(EcobeeConfig())
         if args.all_time:
             ecobee.update_all_history()
