@@ -2,10 +2,9 @@ from argparse import ArgumentParser
 
 import datetime
 import logging
-import os.path
 import requests
 
-from ecobee_config import EcobeeConfig, CONFIG_FILENAME
+from ecobee_config import EcobeeConfig, DEFAULT_CONFIG_FILENAME
 from ecobee_setup import EcobeeSetup
 
 # First values here are Ecobee's request column names, second are readable names used for the CSV file header
@@ -199,6 +198,7 @@ class EcobeeCSV:
         # TODO - add column for thermostat id if not exists
         # set key using thermostat id/date/time
 
+        df.update()
 
 
         # TODO - this is dumb
@@ -283,20 +283,24 @@ if __name__ == "__main__":
         const=logging.DEBUG,
         default=logging.INFO,
     )
+    parser.add_argument(
+        "-c",
+        "--config",
+        help="Config JSON location",
+        type=str,
+        default=DEFAULT_CONFIG_FILENAME,
+    )
     parser.add_argument("--setup", action="store_true", help="Setup ecobee connection")
     args = parser.parse_args()
 
     logging.basicConfig(level=args.loglevel, format="%(message)s")
 
+    config = EcobeeConfig(config_location=args.config)
     if args.setup:
-        if not os.path.isfile(CONFIG_FILENAME):
-            logging.info(f"***Creating default config file at {CONFIG_FILENAME}")
-            with open(CONFIG_FILENAME, "w+") as config_file:
-                config_file.write("{}")
-
-        EcobeeSetup(EcobeeConfig()).setup()
+        EcobeeSetup(config).setup()
     else:
-        ecobee = EcobeeCSV(EcobeeConfig())
+        config.load()
+        ecobee = EcobeeCSV(config)
         if args.all_time:
             ecobee.update_all_history()
         else:

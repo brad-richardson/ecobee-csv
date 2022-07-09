@@ -2,8 +2,7 @@ import requests
 import time
 import webbrowser
 import logging
-
-from ecobee_config import CONFIG_FILENAME
+import os
 
 CONSUMER_LOGIN_URL = "https://auth.ecobee.com/u/login"
 
@@ -16,7 +15,15 @@ class EcobeeSetup:
         return self.config.access_token != "" and self.config.refresh_token != ""
 
     def setup(self):
-        if self.config.pin != "" and self.config.code != "":
+        if not os.path.isfile(self.config.config_location):
+            logging.info(f"***Creating default config file at {self.config.config_location}")
+            with open(self.config.config_location, "w+") as config_file:
+                config_file.write("{}")
+            # setup default keys
+            self.config.load()
+            self.config.save()
+
+        if self.config.pin and self.config.code:
             choice = input("Application appears to be setup already. Reset? (y/n) ")
             if choice.lower() != "y":
                 return

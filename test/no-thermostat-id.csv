@@ -1,0 +1,3 @@
+Date,Time,Aux Heat (sec),Aux Heat Stage 2 (sec),Aux Heat Stage 3 (sec),Cool Stage 1 (sec),Cool Stage 2 (sec),Heat Stage 1 (sec),Heat Stage 2 (sec),Dehumidifier (sec),Demand Mgmt Offset (F),Economizer Runtime (sec),Fan (sec),Humidifier (sec),HVAC Mode,Outdoor Humidity (%),Outdoor Temp (F),Sky Cover,Ventilator (sec),Wind Speed (km/h),Indoor Temp Avg (F),Override Event,Climate Mode,Zone Cool Temp,Zone Heat Temp,Humidity Avg (%),Humidity High (%),Humidity Low (%),HVAC System Mode,Zone Occupancy
+2022-07-07,19:55:00,0,0,0,0,0,0,0,0,0.1,0,0,0,cool,53,76.4,4,0,0,74.1,auto,Home,74,74,54,0,0,compressorCoolOff,0
+2022-07-07,19:55:00,0,0,0,225,0,0,0,0,,0,225,0,cool,53,76.4,4,0,0,74.1,,Home,74,69,54,0,0,compressorCoolOff,0

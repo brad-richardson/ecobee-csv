@@ -1,0 +1,12 @@
+{
+    "pin": "",
+    "code": "",
+    "access_token": "",
+    "refresh_token": "",
+    "api_key": "",
+    "thermostat_ids": [
+        "123",
+        "456"
+    ],
+    "csv_location": "ecobee.csv"
+}
