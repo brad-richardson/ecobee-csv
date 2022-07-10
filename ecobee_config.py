@@ -41,14 +41,3 @@ class EcobeeConfig:
 
         return {"Authorization": "Bearer " + self.access_token}
 
-    # CSV thermostat ids (ex: "1234,5678,9000")
-    def thermostat_ids_csv(self):
-        if not self.loaded:
-            raise Exception("Config not loaded!")
-
-        csv = ""
-        prefix = ""
-        for thermostat_id in self.thermostat_ids:
-            csv = csv + prefix + thermostat_id
-            prefix = ","
-        return csv

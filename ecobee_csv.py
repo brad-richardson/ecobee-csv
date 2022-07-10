@@ -125,7 +125,6 @@ class EcobeeCSV:
         end_date = date_string(days_ago=days_ago_end)
 
         logging.info("***Fetching data from " + start_date + " to " + end_date + "***")
-        thermostat_ids_csv = self.config.thermostat_ids_csv()
         columns_csv = ",".join([column[0] for column in REQUEST_COLUMNS])
         url = (
             'https://api.ecobee.com/1/runtimeReport?format=json&body={"startDate":"'
@@ -138,7 +137,7 @@ class EcobeeCSV:
             + columns_csv
             + '"'
             + ',"selection":{"selectionType":"thermostats","selectionMatch":"'
-            + thermostat_ids_csv
+            + ",".join(self.config.thermostat_ids)
             + '"}}'
         )
         logging.debug(f"Data fetch URL: {url}")
