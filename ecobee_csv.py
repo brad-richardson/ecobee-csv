@@ -1,14 +1,18 @@
 from argparse import ArgumentParser
 
 import datetime
+from io import StringIO
 import logging
+import os
+from pandas import DataFrame
+import pandas as pd
 import requests
 
 from ecobee_config import EcobeeConfig, DEFAULT_CONFIG_FILENAME
 from ecobee_setup import EcobeeSetup
 
 # First values here are Ecobee's request column names, second are readable names used for the CSV file header
-COLUMNS = (
+REQUEST_COLUMNS = (
     ("auxHeat1", "Aux Heat (sec)"),
     ("auxHeat2", "Aux Heat Stage 2 (sec)"),
     ("auxHeat3", "Aux Heat Stage 3 (sec)"),
@@ -38,9 +42,9 @@ COLUMNS = (
     ("zoneHvacMode", "HVAC System Mode"),
     ("zoneOccupancy", "Zone Occupancy"),
 )
-CSV_HEADER_ROW = "Thermostat ID,Date,Time," + ",".join(
-    [column[1] for column in COLUMNS]
-)
+THERMOSTAT_ID_COLUMN = "Thermostat ID"
+ALL_COLUMNS = [THERMOSTAT_ID_COLUMN, "Date", "Time"] + [column[1] for column in REQUEST_COLUMNS]
+CSV_HEADER_ROW = ",".join(ALL_COLUMNS)
 
 
 class EcobeeCSV:
@@ -51,18 +55,16 @@ class EcobeeCSV:
     def update(self, days_ago_start, days_ago_end):
         self.__refresh_tokens()
         self.__fetch_thermostats()
-        new_data = self.__fetch_data(
+        existing_df = self.__read_csv()
+        new_data_rows = self.__fetch_data(
             days_ago_start=days_ago_start, days_ago_end=days_ago_end
         )
-        existing_data = self.__read_csv()
-        updated_data = self.__update_data(
-            existing_data=existing_data, new_data=new_data
-        )
-        self.__write_csv(csv_lines=updated_data)
+        new_df = pd.read_csv(StringIO("\n".join(new_data_rows)), names=ALL_COLUMNS)
+        updated_df = EcobeeCSV.update_data(existing_df, new_df)
+        updated_df.to_csv(self.config.csv_location)
 
     # Fetch all history and save to CSV, overwriting all
     def update_all_history(self):
-        # Verify that they want to do this - will overwrite any old data
         choice = input(
             "This will overwrite any existing file at "
             + self.config.csv_location
@@ -70,10 +72,16 @@ class EcobeeCSV:
         )
         if choice.lower() != "y":
             return
+        
         self.__refresh_tokens()
         self.__fetch_thermostats()
-        data = self.__fetch_all_data()
-        self.__write_csv(csv_lines=data)
+
+        # Already provided as CSV, write directly
+        csv_lines = self.__fetch_all_data()
+        with open(self.config.csv_location, "w") as csv_file:
+            csv_file.write(CSV_HEADER_ROW + "\n")
+            for line in csv_lines:
+                csv_file.write(line + "\n")
 
     # Refresh access and refresh tokens
     def __refresh_tokens(self):
@@ -108,7 +116,7 @@ class EcobeeCSV:
         self.config.save()
 
     # Fetch historical data for first thermostat
-    def __fetch_data(self, days_ago_start, days_ago_end):
+    def __fetch_data(self, days_ago_start, days_ago_end) -> DataFrame:
         if days_ago_start <= days_ago_end:
             raise ValueError("Days ago start must be greater than days ago end!")
         if days_ago_end - days_ago_start > 30:
@@ -118,7 +126,7 @@ class EcobeeCSV:
 
         logging.info("***Fetching data from " + start_date + " to " + end_date + "***")
         thermostat_ids_csv = self.config.thermostat_ids_csv()
-        columns_csv = ",".join([column[0] for column in COLUMNS])
+        columns_csv = ",".join([column[0] for column in REQUEST_COLUMNS])
         url = (
             'https://api.ecobee.com/1/runtimeReport?format=json&body={"startDate":"'
             + start_date
@@ -150,7 +158,7 @@ class EcobeeCSV:
         return data
 
     # Find earliest month with data and then download all data from that point until now
-    def __fetch_all_data(self):
+    def __fetch_all_data(self) -> DataFrame:
         logging.info("***Fetching all data***")
         history_days_ago = 30
         logging.info("Attempting to find when thermostat history began")
@@ -183,46 +191,26 @@ class EcobeeCSV:
         return all_data
 
     # Read existing CSV data if exists
-    def __read_csv(self):
+    def __read_csv(self) -> DataFrame:
         logging.info("***Reading CSV from " + self.config.csv_location + "***")
         if not os.path.exists(self.config.csv_location):
-            return []
-        with open(self.config.csv_location, "r") as csv_file:
-            return [line.rstrip() for line in csv_file]
+            return DataFrame()
+        return pd.read_csv(self.config.csv_location)
 
     # Override any old data with new data, sort it and return it
     @staticmethod
-    def __update_data(existing_df, new_df):
-        logging.info("***Updating data***")
-        updated_data_dict = {}
-        # TODO - add column for thermostat id if not exists
-        # set key using thermostat id/date/time
+    def update_data(existing_df: DataFrame, new_df: DataFrame) -> DataFrame:
+        if THERMOSTAT_ID_COLUMN not in existing_df.columns:
+            existing_df.insert(0, THERMOSTAT_ID_COLUMN, 0)
+        if THERMOSTAT_ID_COLUMN not in new_df.columns:
+            new_df.insert(0, THERMOSTAT_ID_COLUMN, 0)
 
-        df.update()
+        indices = [THERMOSTAT_ID_COLUMN, "Date", "Time"]
+        existing_df = existing_df.reset_index(drop=True).set_index(indices)
+        new_df = new_df.reset_index(drop=True).set_index(indices)
 
-
-        # TODO - this is dumb
-        comma_index = 19  # Index of comma after time column for splitting
-        for row in existing_data[1:]:
-            updated_data_dict[row[0:comma_index]] = row[comma_index:]
-        for row in new_data:
-            updated_data_dict[row[0:comma_index]] = row[comma_index:]
-        updated_data = []
-        for item in updated_data_dict.items():
-            updated_data.append(item[0] + item[1])
-        updated_data.sort()
-        return updated_data
-
-    # Write out data to the CSV
-    def __write_csv(self, csv_lines):
-        logging.info(f"***Writing CSV to {self.config.csv_location}***")
-        logging.debug(f"Writing {len(csv_lines)} lines to file")
-
-        # TODO, write out dataframe
-        with open(self.config.csv_location, "w") as csv_file:
-            csv_file.write(CSV_HEADER_ROW + "\n")
-            for line in csv_lines:
-                csv_file.write(line + "\n")
+        existing_df.update(new_df)
+        return existing_df.combine_first(new_df)
 
 
 # Converts days ago int to date string like 2017-08-07
